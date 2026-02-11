@@ -1,0 +1,154 @@
+#!/bin/bash
+export SHELL=$(command -v bash)
+# X11 -> Wayland剪贴板同步
+# ==========================================
+# 日志函数定义
+# ==========================================
+log() {
+    local level="$1"
+    local msg="$2"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $msg"
+}
+
+# ==========================================
+# 环境检查
+# ==========================================
+if ! command -v clipnotify &>/dev/null; then
+    notify-send "clipnotify isn't installed. x11 --> wayland clipboard sync can't work properly."
+    log "ERROR" "clipnotify 未安装，脚本退出。"
+    exit 1
+fi
+
+log "INFO" "=== 启动 X11 -> Wayland 同步守护进程 ==="
+
+# ==========================================
+# 主逻辑: 监测 X11 剪贴板变化
+# ==========================================
+x2w() {
+    # 首次启动前先进入循环
+    while clipnotify; do
+        log "INFO" ">>> 监测到 X11 剪贴板变化信号"
+        
+        # 获取剪贴板中的数据类型
+        TYPE=$(xclip -selection clipboard -t TARGETS -o 2>/dev/null)
+        
+        # 格式化以便日志显示
+        CLEAN_TYPES=$(echo "$TYPE" | tr '\n' ',' | sed 's/,$//')
+        log "DEBUG" "X11 包含的数据类型: [$CLEAN_TYPES]"
+
+        # ---------------------------------------------------------
+        # 1. 纯文字 (UTF8_STRING)
+        # ---------------------------------------------------------
+        if [[ "$TYPE" =~ "UTF8_STRING" ]]; then
+            log "INFO" "匹配类型: 纯文字 (UTF8_STRING)"
+            
+            W_HASH=$(wl-paste 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            
+            log "DEBUG" "哈希比对: Wayland[$W_HASH] vs X11[$X_HASH]"
+
+            if [ "$W_HASH" != "$X_HASH" ]; then
+                log "ACTION" "内容不同，正在同步到 Wayland..."
+                xclip -sel clip -o -t UTF8_STRING | wl-copy -t UTF8_STRING
+                if [ $? -eq 0 ]; then log "SUCCESS" "纯文字同步成功"; else log "ERROR" "纯文字同步失败"; fi
+                continue
+            else
+                log "SKIP" "内容一致，跳过同步"
+            fi
+
+        # ---------------------------------------------------------
+        # 2. QQ / HTML 富文本
+        # ---------------------------------------------------------
+        elif [[ "$TYPE" =~ "text/html" ]] && [[ "$TYPE" =~ "QQ_Unicode_RichEdit_Format" ]]; then
+            log "INFO" "匹配类型: QQ / text/html"
+            
+            W_HASH=$(wl-paste -t text/html 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t text/html 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            
+            log "DEBUG" "哈希比对: Wayland[$W_HASH] vs X11[$X_HASH]"
+
+            if [ "$W_HASH" != "$X_HASH" ]; then
+                log "ACTION" "HTML内容不同，正在同步到 Wayland..."
+                xclip -sel clip -o -t text/html | wl-copy -t text/html
+                if [ $? -eq 0 ]; then log "SUCCESS" "HTML同步成功"; else log "ERROR" "HTML同步失败"; fi
+                continue
+            else
+                log "SKIP" "内容一致，跳过同步"
+            fi
+
+        # ---------------------------------------------------------
+        # 3. 图片 (image/png)
+        # ---------------------------------------------------------
+        elif [[ "$TYPE" =~ "image/png" ]]; then
+            log "INFO" "匹配类型: PNG 图片 (image/png)"
+            
+            W_HASH=$(wl-paste -t image/png 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t image/png 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            
+            log "DEBUG" "哈希比对: Wayland[$W_HASH] vs X11[$X_HASH]"
+
+            if [ "$W_HASH" != "$X_HASH" ]; then
+                log "ACTION" "图片内容不同，正在同步到 Wayland..."
+                xclip -sel clip -o -t image/png | wl-copy -t image/png
+                if [ $? -eq 0 ]; then log "SUCCESS" "图片同步成功"; else log "ERROR" "图片同步失败"; fi
+                continue
+            else
+                log "SKIP" "图片内容一致，跳过同步"
+            fi
+
+        # ---------------------------------------------------------
+        # 4. 图片 (image/jpeg)
+        # ---------------------------------------------------------
+        elif [[ "$TYPE" =~ "image/jpeg" ]]; then
+            log "INFO" "匹配类型: JPEG图片 (image/jpeg)"
+            
+            W_HASH=$(wl-paste -t image/jpeg 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t image/jpeg 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+            
+            log "DEBUG" "哈希比对: Wayland[$W_HASH] vs X11[$X_HASH]"
+
+            if [ "$W_HASH" != "$X_HASH" ]; then
+                log "ACTION" "图片内容不同，正在同步到 Wayland..."
+                xclip -sel clip -o -t image/jpeg | wl-copy -t image/jpeg
+                if [ $? -eq 0 ]; then log "SUCCESS" "图片同步成功"; else log "ERROR" "图片同步失败"; fi
+                continue
+            else
+                log "SKIP" "图片内容一致，跳过同步"
+            fi
+
+        # ---------------------------------------------------------
+        # 5. 文件链接 (gnome-copied-files)
+        # ---------------------------------------------------------
+        elif [[ "$TYPE" =~ "x-special/gnome-copied-files" ]]; then
+            log "INFO" "匹配类型: 文件列表 (gnome-copied-files)"
+            
+            # 计算 Wayland 哈希 (去掉 file:// 前缀)
+            W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n' | md5sum | awk '{print $1}')
+            
+            # 计算 X11 哈希 (去掉第一行，去掉 file:// 前缀)
+            X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | tr -d '\n'| md5sum | awk '{print $1}')
+            
+            log "DEBUG" "哈希比对(去头): Wayland[$W_HASH] vs X11[$X_HASH]"
+
+            if [ "$W_HASH" != "$X_HASH" ]; then
+                log "ACTION" "文件列表不同，正在同步到 Wayland (标准化 URI)..."
+                
+                # 同步时：确保加上 file:// 前缀
+                xclip -sel clip -o -t x-special/gnome-copied-files | tail -n +2 | sed 's|^/|file:///|' | wl-copy --type text/uri-list
+                
+                if [ $? -eq 0 ]; then log "SUCCESS" "文件列表同步成功"; else log "ERROR" "文件列表同步失败"; fi
+                continue
+            else
+                log "SKIP" "文件列表一致，跳过同步"
+            fi
+
+        else
+            log "WARN" "未匹配到支持的同步类型，忽略。"
+        fi
+        
+        log "INFO" "--- 本次循环结束，等待下一次 clipnotify 信号 ---"
+    done
+}
+
+# 执行
+x2w

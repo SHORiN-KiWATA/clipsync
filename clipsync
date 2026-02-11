@@ -1,0 +1,17 @@
+#!/bin/bash
+
+cleanup() {
+    echo "[ClipSync] Stopping services..."
+    kill $(jobs -p) 2>/dev/null
+    exit
+}
+
+trap cleanup SIGINT SIGTERM EXIT
+
+# 1. X11 -> Wayland (守护进程)
+clipsync-x2w &
+
+# 2. Wayland -> X11 (监听器)
+wl-paste --watch clipsync-w2x &
+
+wait
