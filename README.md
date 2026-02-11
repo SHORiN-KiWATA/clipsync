@@ -1,10 +1,18 @@
 # Clipsync
 
-Clipboard synchronization sctipts for Wayland Compositor ( X11 <--> Wayland )
+Clipboard synchronization sctipts for Wayland Compositors ( X11 <--> Wayland ).
+
+WARN: Only tested on Niri and Hyprland.
 
 - Dependencies
 
-`xclip` `wl-clipboard` `clipnotify`
+    `xclip` `wl-clipboard` `clipnotify`
+
+- Installation
+
+    ```
+    yay -S clipsync-git
+    ```
 
 - Usage
 
