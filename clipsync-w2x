@@ -11,24 +11,52 @@ log() {
     local msg="$2"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $msg"
 }
-
+sleep 0.1
 # 空字符串的 MD5，用于检测读取失败
 EMPTY_MD5="d41d8cd98f00b204e9800998ecf8427e"
 
 log "INFO" "=== 脚本触发: 开始检测剪贴板数据类型 ==="
 
-TYPE=$(wl-paste --list-types 2>/dev/null)
+TYPE=$(wl-paste --list-types)
 CLEAN_TYPES=$(echo "$TYPE" | tr '\n' ',' | sed 's/,$//')
 log "DEBUG" "检测到的源类型列表: [$CLEAN_TYPES]"
 
 # ==========================================
-# 1. 文件链接 (text/uri-list)
+# wechat图片 (text/uri-list x-qt-image --> text/uri-list)
 # ==========================================
-if [[ "$TYPE" =~ "text/uri-list" ]]; then 
+
+if [[ "$CLEAN_TYPES" =~ "application/x-qt-image" ]]; then
+    log "INFO" "匹配类型: uri-list x-qt-image"
+    
+    # 计算哈希 (两边都去掉 'file://' 前缀，忽略协议头差异)
+    W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | md5sum | awk '{print $1}')
+    X_HASH=$(xclip -o -sel clip -t text/uri-list  2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | md5sum | awk '{print $1}')
+    
+    if [[ "$W_HASH" == "$EMPTY_MD5" ]]; then
+        log "WARN" "Wayland 文件列表为空，跳过。"
+        exit 0
+    fi
+
+    log "DEBUG" "哈希比对 (已去头): Wayland[${W_HASH:0:8}...] vs X11[${X_HASH:0:8}...]"
+
+    if [ "$W_HASH" != "$X_HASH" ]; then
+        log "ACTION" "正在同步文件链接到 X11 (标准化为 file:// URI)..."
+        
+        # 补全 file:// 前缀
+        wl-paste -t text/uri-list | sed 's|^/|file:///|' | xclip -sel clip -t text/uri-list   
+        
+        if [ $? -eq 0 ]; then log "SUCCESS" "文件链接同步完成"; else log "ERROR" "文件链接同步失败"; fi
+    else 
+        log "SKIP" "内容重复，已跳过"
+    fi
+# ==========================================
+# 文件链接 (text/uri-list --> x-special/gnome-copied-files)
+# ==========================================
+elif [[ "$TYPE" =~ "text/uri-list" ]]; then 
     log "INFO" "匹配类型: 文件链接 (text/uri-list)"
     
     # 计算哈希 (两边都去掉 'file://' 前缀，忽略协议头差异)
-    W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n' | md5sum | awk '{print $1}')
+    W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | md5sum | awk '{print $1}')
     X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | md5sum | awk '{print $1}')
     
     if [[ "$W_HASH" == "$EMPTY_MD5" ]]; then
@@ -50,7 +78,7 @@ if [[ "$TYPE" =~ "text/uri-list" ]]; then
     fi
 
 # ==========================================
-# 2. QQ / HTML 富文本
+# QQ / HTML 富文本
 # ==========================================
 elif [[ "$TYPE" =~ "text/html" ]]; then
     log "INFO" "匹配类型: HTML / QQ 富文本"
@@ -81,7 +109,7 @@ elif [[ "$TYPE" =~ "text/html" ]]; then
     fi
 
 # ==========================================
-# 3. 图片 (智能探测 PNG/JPEG)
+# 图片 (PNG/JPEG)
 # ==========================================
 elif [[ "$TYPE" =~ "image/" ]]; then
     log "INFO" "匹配类型: 图片 (image/*) - 智能探测"
@@ -127,19 +155,19 @@ elif [[ "$TYPE" =~ "image/" ]]; then
     fi 
 
 # ==========================================
-# 4. 纯文字 (text/plain)
+# 纯文字 (text/plain)
 # ==========================================
 elif [[ "$TYPE" =~ "text/plain" ]]; then 
     log "INFO" "匹配类型: 纯文字 (text/plain)"
     
-    W_HASH=$(wl-paste -t text/plain 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+    W_HASH=$(wl-paste -t text/plain 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
     
     if [[ "$W_HASH" == "$EMPTY_MD5" ]]; then
         log "WARN" "Wayland 文本为空，跳过同步。"
         exit 0
     fi
     
-    X_HASH=$(xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n' | md5sum | awk '{print $1}')
+    X_HASH=$(xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
 
     if [ "$W_HASH" != "$X_HASH" ]; then
         log "ACTION" "正在同步纯文字到 X11..."
