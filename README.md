@@ -20,6 +20,8 @@ WARN: Only tested on Niri and Hyprland.
     systemctl enable --user clipsync
     ```
 
+    It's also recommend to use my clipboard tui with these scrtips:[shorinclip](https://github.com/SHORiN-KiWATA/shorinclip)
+
 - Features
 
     This project contains three scripts and one service.
