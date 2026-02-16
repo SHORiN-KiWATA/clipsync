@@ -45,8 +45,8 @@ x2w() {
             log "INFO" "匹配类型: x-qt-image"
             
             # 计算 Wayland 哈希 (去掉 file:// 前缀)
-            W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | md5sum | awk '{print $1}')
-            X_HASH=$(xclip -o -sel clip -t text/uri-list  2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | md5sum | awk '{print $1}')
+            W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | xxh128sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t text/uri-list  2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | xxh128sum | awk '{print $1}')
             
             log "DEBUG" "哈希比对(去头): Wayland[$W_HASH] vs X11[$X_HASH]"
 
@@ -74,10 +74,10 @@ x2w() {
             log "INFO" "匹配类型: QQ_Unicode_RichEdit_Format"
             
             # 计算 Wayland 哈希 (去掉 file:// 前缀)
-            W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | md5sum | awk '{print $1}')
+            W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | xxh128sum | awk '{print $1}')
             
             # 计算 X11 哈希 (去掉第一行，去掉 file:// 前缀)
-            X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | tr -d '\n\r'| md5sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | tr -d '\n\r'| xxh128sum | awk '{print $1}')
             
             log "DEBUG" "哈希比对(去头): Wayland[$W_HASH] vs X11[$X_HASH]"
 
@@ -105,8 +105,8 @@ x2w() {
         elif [[ "$TYPE" =~ "image/png" ]]; then
             log "INFO" "匹配类型: PNG 图片 (image/png)"
             
-            W_HASH=$(wl-paste -t image/png 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
-            X_HASH=$(xclip -o -sel clip -t image/png 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
+            W_HASH=$(wl-paste -t image/png 2>/dev/null | tr -d '\n\r' | xxh128sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t image/png 2>/dev/null | tr -d '\n\r' | xxh128sum | awk '{print $1}')
             
             log "DEBUG" "哈希比对: Wayland[$W_HASH] vs X11[$X_HASH]"
 
@@ -125,8 +125,8 @@ x2w() {
         elif [[ "$TYPE" =~ "image/jpeg" ]]; then
             log "INFO" "匹配类型: JPEG图片 (image/jpeg)"
             
-            W_HASH=$(wl-paste -t image/jpeg 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
-            X_HASH=$(xclip -o -sel clip -t image/jpeg 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
+            W_HASH=$(wl-paste -t image/jpeg 2>/dev/null | tr -d '\n\r' | xxh128sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t image/jpeg 2>/dev/null | tr -d '\n\r' | xxh128sum | awk '{print $1}')
             
             log "DEBUG" "哈希比对: Wayland[$W_HASH] vs X11[$X_HASH]"
 
@@ -146,10 +146,10 @@ x2w() {
             log "INFO" "匹配类型: 文件列表 (gnome-copied-files)"
             
             # 计算 Wayland 哈希 (去掉 file:// 前缀)
-            W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | md5sum | awk '{print $1}')
+            W_HASH=$(wl-paste -t text/uri-list 2>/dev/null | sed 's|^file://||' | tr -d '\n\r' | xxh128sum | awk '{print $1}')
             
             # 计算 X11 哈希 (去掉第一行，去掉 file:// 前缀)
-            X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | tr -d '\n\r'| md5sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t x-special/gnome-copied-files 2>/dev/null | tail -n +2 | sed 's|^file://||' | tr -d '\n\r'| xxh128sum | awk '{print $1}')
             
             log "DEBUG" "哈希比对(去头): Wayland[$W_HASH] vs X11[$X_HASH]"
 
@@ -171,8 +171,8 @@ x2w() {
         elif [[ "$TYPE" =~ "UTF8_STRING" ]]; then
             log "INFO" "匹配类型: 纯文字 (UTF8_STRING)"
             
-            W_HASH=$(wl-paste 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
-            X_HASH=$(xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | md5sum | awk '{print $1}')
+            W_HASH=$(wl-paste 2>/dev/null | tr -d '\n\r' | xxh128sum | awk '{print $1}')
+            X_HASH=$(xclip -o -sel clip -t UTF8_STRING 2>/dev/null | tr -d '\n\r' | xxh128sum | awk '{print $1}')
             
             log "DEBUG" "哈希比对: Wayland[$W_HASH] vs X11[$X_HASH]"
 
