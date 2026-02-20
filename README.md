@@ -4,6 +4,10 @@ Clipboard synchronization sctipts for Wayland Compositors ( X11 <--> Wayland ).
 
 WARN: Only tested on Niri and Hyprland.
 
+-  Know issue
+
+    ⚠️ copy big binary data or text will somehow crash.
+
 - Dependencies
 
     `xclip` `wl-clipboard` `clipnotify`
