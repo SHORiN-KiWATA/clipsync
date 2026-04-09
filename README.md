@@ -14,6 +14,8 @@ Clipboard synchronization sctipts for Wayland Compositors ( X11 <--> Wayland ).
 
 - Usage
 
+    run `clipsync` command or use systemd 
+    
     ```
     systemctl enable --user clipsync
     ```
