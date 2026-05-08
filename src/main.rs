@@ -231,7 +231,7 @@ fn main() {
                 } else if types_str.contains("image/jpeg") {
                     ("image/jpeg", "image/jpeg", "raw")
                 } else if types_str.contains("text/plain;charset=utf-8") {
-                    ("text/plain;charset=utf-8", "text/plain", "text") 
+                    ("text/plain;charset=utf-8", "text/plain", "text")
                 } else if types_str.contains("UTF8_STRING") {
                     ("UTF8_STRING", "text/plain", "text")
                 } else if types_str.contains("text/plain") {
@@ -325,6 +325,8 @@ fn main() {
             ("image/png", "raw")
         } else if types_str.contains("image/jpeg") {
             ("image/jpeg", "raw")
+        } else if types_str.contains("text/plain;charset=utf-8") {
+            ("text/plain;charset=utf-8", "text")
         } else if types_str.contains("text/plain") {
             ("text/plain", "text")
         } else if types_str.contains("text/html") {
@@ -371,11 +373,7 @@ fn main() {
             w_data
         };
 
-        let target_t = if process_mode == "text" {
-            "UTF8_STRING"
-        } else {
-            sync_mime
-        };
+        let target_t = sync_mime;
 
         if write_clipboard(
             "xclip",
